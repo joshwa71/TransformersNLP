@@ -5,7 +5,7 @@ import torch
 
 
 class MultiHeadAttention(nn.Module):
-    def __innit__(self, d_model, d_k, n_heads):
+    def __init__(self, d_model, d_k, n_heads):
         super().__init__()
         self.k = nn.Linear(d_model, d_k * n_heads)
         self.q = nn.Linear(d_model, d_k * n_heads)
@@ -46,7 +46,7 @@ class MultiHeadAttention(nn.Module):
     
 
 class CausalAttention(nn.Module):
-    def __innit__(self, d_model, d_k, n_heads, max_len=2048):
+    def __init__(self, d_model, d_k, n_heads, max_len=2048):
         super().__init__()
         self.k = nn.Linear(d_model, d_k * n_heads)
         self.q = nn.Linear(d_model, d_k * n_heads)
@@ -55,9 +55,8 @@ class CausalAttention(nn.Module):
         self.d_model = d_model
         self.n_heads = n_heads
         self.d_k = d_k
-
-        self.cm = torch.trill(torch.ones(max_len, max_len))
-        self.register_buffer('cm', self.cm.view(1, 1 , max_len, max_len))
+        cm = torch.tril(torch.ones(int(max_len), int(max_len)))
+        self.register_buffer('cm', cm.view(1, 1 , max_len, max_len))
 
     def forward(self, k, q, v, pad_mask=None):
 
@@ -128,7 +127,7 @@ class DecoderTransformerBlock(nn.Module):
         self.relu = nn.ReLU()
     
     def forward(self, x, pad_mask=None):
-        x1 = self.attention(x, x, x, mask=pad_mask)
+        x1 = self.attention(x, x, x, pad_mask=pad_mask)
         x = self.norm1(x + x1)
         x = self.norm1(x)
         x1 = self.fc1(x)
@@ -183,7 +182,7 @@ class Decoder(nn.Module):
 
         self.embedding = nn.Embedding(vocab_size, d_model)
         self.pos_encoding = PositionalEncoding(d_model, max_len=max_len, dropout_prob=dropout_prob)
-        transformer_blocks = [DecoderTransformerBlock(d_model, d_k, n_heads, dropout_prob) for _ in range(n_layers)]
+        transformer_blocks = [DecoderTransformerBlock(d_model, d_k, n_heads, max_len, dropout_prob) for _ in range(n_layers)]
         self.transformer_blocks = nn.Sequential(*transformer_blocks)
         self.ln = nn.LayerNorm(d_model)
         self.fc = nn.Linear(d_model, vocab_size)    
